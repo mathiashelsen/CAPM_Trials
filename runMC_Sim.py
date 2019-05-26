@@ -54,6 +54,7 @@ for j in range(len(years)):
     returnStd = np.zeros((N_MC_Iterations, 1));
     
     optimalStd = 1.0;
+    optimalAvg = 0.0;
     
     optimalWeight_risk = np.zeros((N_Stocks, 1)) 
     optimalWeight_return = np.zeros((N_Stocks, 1)) 
@@ -69,10 +70,12 @@ for j in range(len(years)):
         if(returnAvg[i] > 0.99*benchmarkAvg and returnAvg[i] < 1.01*benchmarkAvg):
             if(returnStd[i] < optimalStd):
                 optimalWeight_return = weightVector
+                optimalStd = returnStd[i]
 
         if(returnStd[i] > 0.99*benchmarkStd and returnStd[i] < 1.01*benchmarkStd):
-            if(returnAvg[i] > benchmarkAvg):
+            if(returnAvg[i] > optimalAvg):
                 optimalWeight_risk = weightVector
+                optimalAvg = returnAvg[i]
 
 
     #

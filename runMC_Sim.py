@@ -4,6 +4,13 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 
+#
+# Generate portfolios on the "efficient frontier" and tests them. Two portfolios are generated 
+# and benchmarked against the SPY. Both have either identical return or identical volatility
+# to the SPY in the calibration period.
+#
+# TODO: Test against random portfolios
+#
 
 tickers = ['AAPL', 'JNJ', 'JPM', 'XOM', 'V', 'PG', 'BA', 'CSCO', 'UNH']
 #, 'JNJ', 'JPM', 'GOOG', 'GOOGL','XOM', 'V', 'PG', 'BAC', 'CSCO', 'VZ', 'UNH', 'DIS', 'T', 'PFE', 'CVX', 'MA', 'HD', 'MRK', 'INTC', 'CMCSA', 'KO', 'WFC', 'BA', 'PEP', 'C']
@@ -46,8 +53,10 @@ for j in range(len(years)):
     returnAvg = np.zeros((N_MC_Iterations, 1));
     returnStd = np.zeros((N_MC_Iterations, 1));
     
-    optimalWeights = np.zeros((N_Stocks, 1));
     optimalStd = 1.0;
+    
+    optimalWeight_risk = np.zeros((N_Stocks, 1)) 
+    optimalWeight_return = np.zeros((N_Stocks, 1)) 
     
     for i in range(N_MC_Iterations):
         weightVector = np.random.rand(N_Stocks, 1)
@@ -59,15 +68,17 @@ for j in range(len(years)):
     
         if(returnAvg[i] > 0.99*benchmarkAvg and returnAvg[i] < 1.01*benchmarkAvg):
             if(returnStd[i] < optimalStd):
-                optimalWeight = weightVector
-                optimalStd = returnStd[i]
-                optimalAvg = returnAvg[i]
-    print "###"
-    print "{},{},{},{}".format(optimalAvg[0], optimalStd[0], benchmarkAvg, benchmarkStd) 
+                optimalWeight_return = weightVector
+
+        if(returnStd[i] > 0.99*benchmarkStd and returnStd[i] < 1.01*benchmarkStd):
+            if(returnAvg[i] > benchmarkAvg):
+                optimalWeight_risk = weightVector
+
 
     #
     # Secondly, evaluate the portfolio in the second half of the year
     #
+    print "###" + year + "###"
  
     start_date = year + '-06-01'
     end_date = year + '-12-31' 
@@ -80,9 +91,13 @@ for j in range(len(years)):
     ret = returns.values
     ret = ret[1:-1, :]
 
-    portfolioReturn = np.matmul(ret, weightVector)
-    returnAvg = np.average(portfolioReturn)
-    returnStd = np.std(portfolioReturn)
+    portfolioReturn_return = np.matmul(ret, optimalWeight_return)
+    returnAvg_return = np.average(portfolioReturn_return)
+    returnStd_return = np.std(portfolioReturn_return)
+
+    portfolioReturn_risk = np.matmul(ret, optimalWeight_risk)
+    returnAvg_risk = np.average(portfolioReturn_risk)
+    returnStd_risk = np.std(portfolioReturn_risk)
 
     benchmark_data = data.DataReader('SPY', 'iex', start_date, end_date)
     benchmark_data = benchmark_data['close']
@@ -94,15 +109,16 @@ for j in range(len(years)):
     benchmarkAvg = np.average(benchmark_ret)
     benchmarkStd = np.std(benchmark_ret)
 
-    market[j,0] = benchmarkStd
-    market[j,1] = benchmarkAvg
+    print "{},{},{},{}".format(returnAvg_return, returnStd_return, benchmarkAvg, benchmarkStd) 
 
-    portfolio[j,0] = returnStd
-    portfolio[j,1] = returnAvg
+    if( (returnAvg_return > benchmarkAvg) and (returnStd_return < benchmarkStd)):
+        print "Free lunch!"
 
-    print "{},{},{},{}".format(returnAvg, returnStd, benchmarkAvg, benchmarkStd) 
-    print returnAvg - benchmarkAvg
-    print returnStd - benchmarkStd
+    print ' '
+    print "{},{},{},{}".format(returnAvg_risk, returnStd_risk, benchmarkAvg, benchmarkStd) 
+
+    if( (returnAvg_risk > benchmarkAvg) and (returnStd_risk < benchmarkStd)):
+        print "Free lunch!"
     print "###"
 
 plt.plot(portfolio[:,0], portfolio[:,1], 'bo')
